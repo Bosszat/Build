@@ -93,9 +93,9 @@ local function formatTable(tbl)
 	local lines = {}
 	for name, info in pairs(tbl) do
 		if typeof(info) == "table" then
-			table.insert(lines, string.format("%s â x%d", info.name or name, info.count or 1))
+			table.insert(lines, string.format("%s Ã¢ÂÂ x%d", info.name or name, info.count or 1))
 		else
-			table.insert(lines, string.format("%s â x%d", name, info))
+			table.insert(lines, string.format("%s Ã¢ÂÂ x%d", name, info))
 		end
 	end
 	if #lines == 0 then
@@ -105,14 +105,15 @@ local function formatTable(tbl)
 end
 
 local function abbreviateNumber(n)
-	local s = {"", "K", "M", "B", "T", "Qa", "Qi"}
+	local s = {"", "K", "M", "B"}
 	local i = 1
 
 	while math.abs(n) >= 1000 and i < #s do
 		n /= 1000
 		i += 1
 	end
-	return string.format("%.1f", n):gsub("%.0$", "") .. s[i]
+    
+	return (string.format("%.1f", n):gsub("%.0$", "") .. s[i]):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
 end
 
 local function sendWebhook()
@@ -121,6 +122,8 @@ local function sendWebhook()
 	local petData, totalPets = getPetData(dataFolder)
 	local eggData, totalEggs = getEggData(dataFolder)
 	local fruitData = getFruitData(dataFolder)
+
+	local candy = localPlayer.PlayerGui.ScreenDino.Root.Coin.TextLabel
 	--[[
 	if (totalPets <= 0) and (totalEggs <= 0) and (next(fruitData) == nil) then
 		print("Skipping webhook.")
@@ -132,7 +135,7 @@ local function sendWebhook()
 		embeds = {
 			{
 				title = localPlayer.Name,
-				description = "Money: "..abbreviateNumber(localPlayer.leaderstats["Money $"].Value).."```"..string.format("Total Pets: %d\n\n%s", totalPets, formatTable(petData)).."```\n".."```"..string.format("Total Eggs: %d\n\n%s", totalEggs, formatTable(eggData)).."```\n".."```"..formatTable(fruitData).."```",
+				description = "Money: "..abbreviateNumber(localPlayer.leaderstats["Money $"].Value).."  Candy: "..candy.Text.."```"..string.format("Total Pets: %d\n\n%s", totalPets, formatTable(petData)).."```\n".."```"..string.format("Total Eggs: %d\n\n%s", totalEggs, formatTable(eggData)).."```\n".."```"..formatTable(fruitData).."```",
 			}
 		}
 	}
