@@ -155,3 +155,61 @@ task.spawn(function()
 		task.wait(getgenv().delay)
 	end
 end)
+
+local players = game:GetService("Players")
+local LocalPlayer = players.LocalPlayer
+
+local base = workspace.Art
+local client = LocalPlayer:GetAttribute("AssignedIslandName")
+local dinoTimeRemain = LocalPlayer:GetAttribute("DinoEventOnlineRemainSecond")
+
+while task.wait(.3) do
+	for _, v in pairs(base:GetChildren()) do
+		if v.Name ~= client then
+			local Occply = v:GetAttribute("OccupyingPlayerId")
+
+			if Occply ~= nil then
+				local args = {
+					[1] = "GiveLike",
+					[2] = tonumber(Occply)
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("Remote"):WaitForChild("CharacterRE"):FireServer(unpack(args))
+			end
+		end
+	end
+
+	task.wait(70)
+end
+
+while task.wait(.3) do
+	if dinoTimeRemain == 0 then
+		local args = {
+			[1] = {
+				["event"] = "onlinepack"
+			}
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("Remote"):WaitForChild("DinoEventRE"):FireServer(unpack(args))
+	end
+end
+
+while task.wait(60) do
+	local args = {
+		[1] = {
+			["event"] = "claimreward",
+			["id"] = "Task_7"
+		}
+	}
+
+	game:GetService("ReplicatedStorage"):WaitForChild("Remote"):WaitForChild("DinoEventRE"):FireServer(unpack(args))
+	task.wait(3)
+	local args = {
+		[1] = {
+			["event"] = "claimreward",
+			["id"] = "Task_8"
+		}
+	}
+
+	game:GetService("ReplicatedStorage"):WaitForChild("Remote"):WaitForChild("DinoEventRE"):FireServer(unpack(args))
+end
