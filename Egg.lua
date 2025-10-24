@@ -1,7 +1,7 @@
 getgenv().webhookUrl = "https://discord.com/api/webhooks/1426125399800156190/DK-PiYJr05tETLwtN5hYgevNSJOdwogQ2pAHsOelfqMusXS8YiC0Mdy_wKL2mvxZ6Rc6"
 getgenv().delay = 300 
 getgenv().whitelist = {
-    Pets = { bear },
+    Pets = { "bear" },
     Eggs = {},
     Fruits = {}
 }
