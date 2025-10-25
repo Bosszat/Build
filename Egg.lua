@@ -5,7 +5,18 @@ getgenv().whitelist = {
     Eggs = {},
     Fruits = {}
 }
+local UserInputService =  game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
+RunService:Set3dRenderingEnabled(false)
+
+UserInputService.WindowFocusReleased:Connect(function()
+    RunService:Set3dRenderingEnabled(false)
+end)
+
+UserInputService.WindowFocused:Connect(function()
+    RunService:Set3dRenderingEnabled(true)
+end)
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
