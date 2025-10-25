@@ -1,7 +1,8 @@
-https://www.roblox.com/games/105555311806207/Build-a-Zoo-Halloween?privateServerLinkCode=86365972619125444788425063359490
+https://www.roblox.com/games/105555311806207/Build-a-Zoo-Halloween?privateServerLinkCode=03127739006481112406317391711860
 
 loadstring(game:HttpGet('http://zuwz.xyz/Zee-BAZ.lua'))()
 
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/104mapleoof-max/roblox-scripts/refs/heads/main/TradeZooNew-obfuscated.lua"))()
+
 
