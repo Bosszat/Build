@@ -90,18 +90,18 @@ local function getFruitData(dataContainer)
 end
 
 local function formatTable(tbl)
-	local lines = {}
-	for name, info in pairs(tbl) do
-		if typeof(info) == "table" then
-			table.insert(lines, string.format("%s Ã¢ÂÂ x%d", info.name or name, info.count or 1))
-		else
-			table.insert(lines, string.format("%s Ã¢ÂÂ x%d", name, info))
-		end
-	end
-	if #lines == 0 then
-		return "None"
-	end
-	return table.concat(lines, "\n")
+    local lines = {}
+    for name, info in pairs(tbl) do
+        if typeof(info) == "table" then
+            table.insert(lines, string.format("%s - x%d", info.name or name, info.count or 1))
+        else
+            table.insert(lines, string.format("%s - x%d", name, info))
+        end
+    end
+    if #lines == 0 then
+        return "None"
+    end
+    return table.concat(lines, "\n")
 end
 
 local function abbreviateNumber(n)
