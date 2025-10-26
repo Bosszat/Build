@@ -1,218 +1,253 @@
+---------------------------------------------------------
+-- 🧩 CONFIG
+---------------------------------------------------------
 getgenv().webhookUrl = "https://discord.com/api/webhooks/1426125399800156190/DK-PiYJr05tETLwtN5hYgevNSJOdwogQ2pAHsOelfqMusXS8YiC0Mdy_wKL2mvxZ6Rc6"
-getgenv().delay = 300 
+getgenv().delay = 300 -- หน่วงเวลาส่ง webhook (วินาที)
+getgenv().fpsLimit = 30 -- 🔒 จำกัด FPS เพื่อประหยัด CPU
 getgenv().whitelist = {
-    Pets = { "bear" },
-    Eggs = {},
-    Fruits = {}
+	Pets = { "bear" },
+	Eggs = {},
+	Fruits = {}
 }
 
-local Players = game:GetService("Players")
-local localPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
+---------------------------------------------------------
+-- ⚙️ FPS LOCK (ลด CPU)
+---------------------------------------------------------
+task.spawn(function()
+	if setfpscap then
+		setfpscap(getgenv().fpsLimit)
+		warn("✅ FPS Lock set to " .. getgenv().fpsLimit)
+	else
+		warn("⚠️ Executor นี้ไม่รองรับ setfpscap(), ใช้ task.wait() แทน")
+	end
+end)
 
+---------------------------------------------------------
+-- 🧠 SAFE LOOP (Loop ประสิทธิภาพสูง)
+---------------------------------------------------------
+local function safeLoop(interval, func)
+	task.spawn(function()
+		while task.wait(interval) do
+			pcall(func)
+		end
+	end)
+end
+
+---------------------------------------------------------
+-- 🌐 MAIN SYSTEM
+---------------------------------------------------------
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+---------------------------------------------------------
+-- 📦 ดึงข้อมูลจาก PlayerGui (Pets / Eggs / Fruits)
+---------------------------------------------------------
 local function getDataFolder()
-    return localPlayer.PlayerGui:FindFirstChild("Data")
+	return LocalPlayer.PlayerGui:FindFirstChild("Data")
 end
 
 local function getEggData(dataContainer)
-    local eggCounts = {}
-    local totalEggs = 0
-    local eggDataFolder = dataContainer and dataContainer:FindFirstChild("Egg")
-    local whitelist = getgenv().whitelist.Eggs
-    local useWhitelist = whitelist and #whitelist > 0
+	local eggCounts, total = {}, 0
+	local folder = dataContainer and dataContainer:FindFirstChild("Egg")
+	local whitelist = getgenv().whitelist.Eggs
+	local useWhitelist = whitelist and #whitelist > 0
 
-    if eggDataFolder then
-        for _, eggData in ipairs(eggDataFolder:GetChildren()) do
-            if eggData:IsA("Configuration") and not eggData:GetAttribute("D") then
-                local eggType = eggData:GetAttribute("T")
-                if eggType then
-
-                    if not useWhitelist or table.find(whitelist, eggType) then
-                        local modifier = eggData:GetAttribute("M") or ""
-                        local uniqueKey = eggType .. "_" .. modifier
-                        local displayName = eggType
-                        if modifier ~= "" then displayName = string.format("%s (%s)", eggType, modifier) end
-                        if not eggCounts[uniqueKey] then eggCounts[uniqueKey] = { name = displayName, count = 0 } end
-                        eggCounts[uniqueKey].count = eggCounts[uniqueKey].count + 1
-                    end
-                    totalEggs = totalEggs + 1
-                end
-            end
-        end
-    end
-    return eggCounts, totalEggs
+	if folder then
+		for _, egg in ipairs(folder:GetChildren()) do
+			if egg:IsA("Configuration") and not egg:GetAttribute("D") then
+				local t = egg:GetAttribute("T")
+				if t and (not useWhitelist or table.find(whitelist, t)) then
+					local mod = egg:GetAttribute("M") or ""
+					local key = t .. "_" .. mod
+					local name = (mod ~= "") and (t .. " (" .. mod .. ")") or t
+					if not eggCounts[key] then eggCounts[key] = { name = name, count = 0 } end
+					eggCounts[key].count += 1
+					total += 1
+				end
+			end
+		end
+	end
+	return eggCounts, total
 end
 
 local function getPetData(dataContainer)
-    local petCounts = {}
-    local totalPets = 0
-    local petDataFolder = dataContainer and dataContainer:FindFirstChild("Pets")
-    local whitelist = getgenv().whitelist.Pets
-    local useWhitelist = whitelist and #whitelist > 0
+	local petCounts, total = {}, 0
+	local folder = dataContainer and dataContainer:FindFirstChild("Pets")
+	local whitelist = getgenv().whitelist.Pets
+	local useWhitelist = whitelist and #whitelist > 0
 
-    if petDataFolder then
-        for _, petData in ipairs(petDataFolder:GetChildren()) do
-            if petData:IsA("Configuration") and not petData:GetAttribute("D") then
-                local petType = petData:GetAttribute("T")
-                if petType then
-                    if not useWhitelist or table.find(whitelist, petType) then
-                        local modifier = petData:GetAttribute("M") or ""
-                        local uniqueKey = petType .. "_" .. modifier
-                        local displayName = petType
-                        if modifier ~= "" then displayName = string.format("%s (%s)", petType, modifier) end
-                        if not petCounts[uniqueKey] then petCounts[uniqueKey] = { name = displayName, count = 0 } end
-                        petCounts[uniqueKey].count = petCounts[uniqueKey].count + 1
-                    end
-                    totalPets = totalPets + 1
-                end
-            end
-        end
-    end
-    return petCounts, totalPets
+	if folder then
+		for _, pet in ipairs(folder:GetChildren()) do
+			if pet:IsA("Configuration") and not pet:GetAttribute("D") then
+				local t = pet:GetAttribute("T")
+				if t and (not useWhitelist or table.find(whitelist, t)) then
+					local mod = pet:GetAttribute("M") or ""
+					local key = t .. "_" .. mod
+					local name = (mod ~= "") and (t .. " (" .. mod .. ")") or t
+					if not petCounts[key] then petCounts[key] = { name = name, count = 0 } end
+					petCounts[key].count += 1
+					total += 1
+				end
+			end
+		end
+	end
+	return petCounts, total
 end
 
 local function getFruitData(dataContainer)
-    local fruitCounts = {}
-    local assetData = dataContainer and dataContainer:FindFirstChild("Asset")
-    local whitelist = getgenv().whitelist.Fruits
-    local useWhitelist = whitelist and #whitelist > 0
+	local fruitCounts = {}
+	local folder = dataContainer and dataContainer:FindFirstChild("Asset")
+	local whitelist = getgenv().whitelist.Fruits
+	local useWhitelist = whitelist and #whitelist > 0
 
-    if assetData then
-        for fruitName, count in pairs(assetData:GetAttributes()) do
-            if type(count) == "number" and count > 0 then
-                if not useWhitelist or table.find(whitelist, fruitName) then
-                    fruitCounts[fruitName] = count
-                end
-            end
-        end
-    end
-    return fruitCounts
+	if folder then
+		for fruit, count in pairs(folder:GetAttributes()) do
+			if type(count) == "number" and count > 0 then
+				if not useWhitelist or table.find(whitelist, fruit) then
+					fruitCounts[fruit] = count
+				end
+			end
+		end
+	end
+	return fruitCounts
 end
 
 local function formatTable(tbl)
-    local lines = {}
-    for name, info in pairs(tbl) do
-        if typeof(info) == "table" then
-            table.insert(lines, string.format("%s - x%d", info.name or name, info.count or 1))
-        else
-            table.insert(lines, string.format("%s - x%d", name, info))
-        end
-    end
-    if #lines == 0 then
-        return "None"
-    end
-    return table.concat(lines, "\n")
+	local lines = {}
+	for name, info in pairs(tbl) do
+		if typeof(info) == "table" then
+			table.insert(lines, string.format("%s - x%d", info.name or name, info.count or 1))
+		else
+			table.insert(lines, string.format("%s - x%d", name, info))
+		end
+	end
+	return #lines > 0 and table.concat(lines, "\n") or "None"
 end
 
 local function abbreviateNumber(n)
 	local s = {"", "K", "M", "B"}
 	local i = 1
-
 	while math.abs(n) >= 1000 and i < #s do
 		n /= 1000
 		i += 1
 	end
-    
-	return (string.format("%.1f", n):gsub("%.0$", "") .. s[i]):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+	return string.format("%.1f%s", n, s[i]):gsub("%.0", "")
 end
 
+---------------------------------------------------------
+-- 📨 ส่งข้อมูลไปยัง Discord Webhook
+---------------------------------------------------------
 local function sendWebhook()
 	local dataFolder = getDataFolder()
-	if not dataFolder then return warn("Data folder not found!") end
+	if not dataFolder then return end
 	local petData, totalPets = getPetData(dataFolder)
 	local eggData, totalEggs = getEggData(dataFolder)
 	local fruitData = getFruitData(dataFolder)
 
-	local candy = localPlayer.PlayerGui.ScreenDino.Root.Coin.TextLabel
-	--[[
-	if (totalPets <= 0) and (totalEggs <= 0) and (next(fruitData) == nil) then
-		print("Skipping webhook.")
-		return
-	end
-	]]
+	local candy = LocalPlayer.PlayerGui.ScreenDino.Root.Coin.TextLabel
 
 	local data = {
 		embeds = {
 			{
-				title = localPlayer.Name,
-				description = "Money: "..abbreviateNumber(localPlayer.leaderstats["Money $"].Value).."  Candy: "..candy.Text.."```"..string.format("Total Pets: %d\n\n%s", totalPets, formatTable(petData)).."```\n".."```"..string.format("Total Eggs: %d\n\n%s", totalEggs, formatTable(eggData)).."```\n".."```"..formatTable(fruitData).."```",
+				title = LocalPlayer.Name,
+				description = "💰 Money: "..abbreviateNumber(LocalPlayer.leaderstats["Money $"].Value)
+					.." | 🍬 Candy: "..candy.Text
+					.."\n```Pets ("..totalPets..")\n"..formatTable(petData)
+					.."```\n```Eggs ("..totalEggs..")\n"..formatTable(eggData)
+					.."```\n```Fruits\n"..formatTable(fruitData).."```",
 			}
 		}
 	}
 	request({
 		Url = getgenv().webhookUrl,
 		Method = "POST",
-		Headers = {
-			["Content-Type"] = "application/json"
-		},
+		Headers = { ["Content-Type"] = "application/json" },
 		Body = HttpService:JSONEncode(data)
-	}) 
-	print("send")
+	})
+	print("✅ Webhook sent!")
 end
 
-warn("run")
+safeLoop(getgenv().delay, sendWebhook)
 
-task.spawn(function()
-	while true do
-		sendWebhook()
-		task.wait(getgenv().delay)
-	end
-end)
-
-local players = game:GetService("Players")
-local LocalPlayer = players.LocalPlayer
-
-local base = workspace.Art
+---------------------------------------------------------
+-- 🦖 Auto Like / Dino Event / Claim Reward
+---------------------------------------------------------
+local base = Workspace.Art
 local client = LocalPlayer:GetAttribute("AssignedIslandName")
-local dinoTimeRemain = LocalPlayer:GetAttribute("DinoEventOnlineRemainSecond")
 
-while task.wait(.3) do
+-- Auto GiveLike
+safeLoop(70, function()
 	for _, v in pairs(base:GetChildren()) do
 		if v.Name ~= client then
-			local Occply = v:GetAttribute("OccupyingPlayerId")
-
-			if Occply ~= nil then
-				local args = {
-					[1] = "GiveLike",
-					[2] = tonumber(Occply)
-				}
-
-				game:GetService("ReplicatedStorage"):WaitForChild("Remote"):WaitForChild("CharacterRE"):FireServer(unpack(args))
+			local occ = v:GetAttribute("OccupyingPlayerId")
+			if occ then
+				local args = { "GiveLike", tonumber(occ) }
+				ReplicatedStorage.Remote.CharacterRE:FireServer(unpack(args))
 			end
 		end
 	end
+end)
 
-	task.wait(70)
-end
-
-while task.wait(.3) do
-	if dinoTimeRemain == 0 then
-		local args = {
-			[1] = {
-				["event"] = "onlinepack"
-			}
-		}
-
-		game:GetService("ReplicatedStorage"):WaitForChild("Remote"):WaitForChild("DinoEventRE"):FireServer(unpack(args))
+-- Auto DinoEvent
+safeLoop(0.3, function()
+	local remain = LocalPlayer:GetAttribute("DinoEventOnlineRemainSecond")
+	if remain == 0 then
+		ReplicatedStorage.Remote.DinoEventRE:FireServer({ { event = "onlinepack" } })
 	end
-end
+end)
 
-while task.wait(60) do
-	local args = {
-		[1] = {
-			["event"] = "claimreward",
-			["id"] = "Task_7"
-		}
-	}
+-- Auto Claim Task
+safeLoop(60, function()
+	for _, id in ipairs({ "Task_7", "Task_8" }) do
+		ReplicatedStorage.Remote.DinoEventRE:FireServer({ { event = "claimreward", id = id } })
+		task.wait(3)
+	end
+end)
 
-	game:GetService("ReplicatedStorage"):WaitForChild("Remote"):WaitForChild("DinoEventRE"):FireServer(unpack(args))
-	task.wait(3)
-	local args = {
-		[1] = {
-			["event"] = "claimreward",
-			["id"] = "Task_8"
-		}
-	}
+---------------------------------------------------------
+-- 🐾 Auto Claim Pet (พร้อม UI เปิด–ปิด)
+---------------------------------------------------------
+local petFolder = Workspace:WaitForChild("Pets")
 
-	game:GetService("ReplicatedStorage"):WaitForChild("Remote"):WaitForChild("DinoEventRE"):FireServer(unpack(args))
-end
+local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+local toggleButton = Instance.new("TextButton", screenGui)
+toggleButton.Size = UDim2.new(0, 220, 0, 50)
+toggleButton.Position = UDim2.new(0, 20, 0, 20)
+toggleButton.Text = "🔴 ปิดใช้งานเก็บเงินออโต้"
+toggleButton.TextScaled = true
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+toggleButton.Draggable = true
+
+local isClaimingEnabled = false
+
+-- Loop สำหรับ Claim Pets
+safeLoop(3, function()
+	if isClaimingEnabled then
+		for _, pet in pairs(petFolder:GetChildren()) do
+			local petUser = pet:GetAttribute("UserId")
+			if petUser and petUser == LocalPlayer.UserId then
+				if pet:FindFirstChild("RE") then
+					pet.RE:FireServer("Claim")
+				end
+			end
+		end
+	end
+end)
+
+toggleButton.MouseButton1Click:Connect(function()
+	isClaimingEnabled = not isClaimingEnabled
+	if isClaimingEnabled then
+		toggleButton.Text = "🟢 เปิดใช้งานเก็บเงินออโต้"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+	else
+		toggleButton.Text = "🔴 ปิดใช้งานเก็บเงินออโต้"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	end
+end)
+
+warn("✅ Script Loaded! ระบบทั้งหมดทำงานเรียบร้อยแล้ว ✅")
