@@ -152,7 +152,7 @@ local function sendWebhook()
 	local data = {
 		embeds = {
 			{
-				title = LocalPlayer.Name,
+				title = string.format("%s (%s)", LocalPlayer.DisplayName, LocalPlayer.Name),
 				description = "💰 Money: "..abbreviateNumber(LocalPlayer.leaderstats["Money $"].Value)
 					.." | 🍬 Candy: "..candy.Text
 					.."\n```Pets ("..totalPets..")\n"..formatTable(petData)
