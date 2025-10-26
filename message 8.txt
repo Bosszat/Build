@@ -6,6 +6,7 @@ loadstring(game:HttpGet('http://zuwz.xyz/Zee-BAZ.lua'))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/104mapleoof-max/roblox-scripts/refs/heads/main/TradeZooNew-obfuscated.lua"))()
 
 
-
+https://www.roblox.com/games/105555311806207/Build-a-Zoo-Halloween?privateServerLinkCode=48077041651546798252572770100371
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/TinySenpaiz/TinyHub/refs/heads/main/TinyHub.lua"))()
+
