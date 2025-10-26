@@ -10,3 +10,6 @@ https://www.roblox.com/games/105555311806207/Build-a-Zoo-Halloween?privateServer
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/TinySenpaiz/TinyHub/refs/heads/main/TinyHub.lua"))()
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/TokyoYoo/gga2/refs/heads/main/Trst.lua"))()
+
+
