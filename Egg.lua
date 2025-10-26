@@ -216,14 +216,14 @@ local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"
 local toggleButton = Instance.new("TextButton", screenGui)
 toggleButton.Size = UDim2.new(0, 220, 0, 50)
 toggleButton.Position = UDim2.new(0, 20, 0, 20)
-toggleButton.Text = "🔴 ปิดใช้งานเก็บเงินออโต้"
+toggleButton.Text = "🟢 เปิดใช้งานเก็บเงินออโต้"
 toggleButton.TextScaled = true
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
 toggleButton.Draggable = true
 
-local isClaimingEnabled = false
+local isClaimingEnabled = true
 
 -- Loop สำหรับ Claim Pets
 safeLoop(3, function()
