@@ -1,34 +1,13 @@
 ---------------------------------------------------------
--- 💾 PERSIST: Save/Load AutoClaim (Delta-ready)
+-- 💾 REMOVED PERSISTENCE: ไม่มีการบันทึก/โหลดการตั้งค่าแล้ว
 ---------------------------------------------------------
-local HttpService = game:GetService("HttpService")
-local CONFIG_PATH = "DinoAutoClaim.cfg.json"
-
-local function loadAutoClaim()
-    if isfile and isfile(CONFIG_PATH) then
-        local ok, data = pcall(function()
-            return HttpService:JSONDecode(readfile(CONFIG_PATH))
-        end)
-        if ok and type(data) == "table" and type(data.isClaimingEnabled) == "boolean" then
-            return data.isClaimingEnabled
-        end
-    end
-    return false -- เริ่มต้นเป็น "ปิด" ถ้ายังไม่เคยบันทึก
-end
-
-local function saveAutoClaim(state)
-    if writefile then
-        pcall(function()
-            writefile(CONFIG_PATH, HttpService:JSONEncode({ isClaimingEnabled = state }))
-        end)
-    end
-end
+local HttpService       = game:GetService("HttpService")
 
 ---------------------------------------------------------
 -- 🧩 CONFIG
 ---------------------------------------------------------
--- 🔹 ตั้ง webhook ผ่าน getgenv ก่อนรันสคริปต์นี้ เช่น:
--- getgenv().webhookUrl = "https://discord.com/api/webhooks/xxxxx"
+-- ตั้ง webhook ผ่าน getgenv ก่อนรันสคริปต์นี้ เช่น:
+getgenv().webhookUrl = "https://discord.com/api/webhooks/1426125399800156190/DK-PiYJr05tETLwtN5hYgevNSJOdwogQ2pAHsOelfqMusXS8YiC0Mdy_wKL2mvxZ6Rc6"
 getgenv().delay      = getgenv().delay or 300   -- หน่วงส่ง webhook (วินาที)
 getgenv().fpsLimit   = getgenv().fpsLimit or 30
 getgenv().whitelist  = getgenv().whitelist or { Pets = { "bear" }, Eggs = {}, Fruits = {} }
@@ -58,10 +37,25 @@ end
 ---------------------------------------------------------
 -- 🌐 SERVICES
 ---------------------------------------------------------
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local Players           = game:GetService("Players")
+local LocalPlayer       = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
+local Workspace         = game:GetService("Workspace")
+
+---------------------------------------------------------
+-- 🧷 ANTI-AFK (เปิดใช้ทันที)
+-- ใช้ VirtualUser จับ Idle แล้วคลิกขวาจิ๋ว ๆ กันโดนเตะ
+---------------------------------------------------------
+do
+    local vu = game:GetService("VirtualUser")
+    LocalPlayer.Idled:Connect(function()
+        pcall(function()
+            vu:CaptureController()
+            vu:ClickButton2(Vector2.new())
+        end)
+    end)
+    warn("🛡️ Anti-AFK enabled (VirtualUser)")
+end
 
 ---------------------------------------------------------
 -- 📦 DATA HELPERS
@@ -113,9 +107,17 @@ local function sendWebhook()
     if not dataFolder or not getgenv().webhookUrl then return end
 
     local petData, totalPets = getPetData(dataFolder)
+
+    -- ทำข้อความรายการ pet แบบย่อ (ชื่อ x จำนวน)
+    local list = {}
+    for _, v in pairs(petData) do
+        table.insert(list, string.format("%s x%s", v.name, abbreviateNumber(v.count)))
+    end
+    local bodyText = next(list) and table.concat(list, "\n") or "None"
+
     local embeds = {{
         title = string.format("%s (%s)", LocalPlayer.DisplayName, LocalPlayer.Name),
-        description = "🐾 Pets ("..totalPets..")\n```"..(next(petData) and "" or "None").."```"
+        description = "🐾 Pets ("..totalPets..")\n```"..bodyText.."```"
     }}
 
     pcall(function()
@@ -162,21 +164,27 @@ end
 safeLoop(300, claimAllTasks)
 
 ---------------------------------------------------------
--- 🐾 Auto Claim Pet + UI (จำค่า ON/OFF)
+-- 🐾 Auto Claim Pet + UI (ไม่มีเซฟสถานะอีกต่อไป)
 ---------------------------------------------------------
 local petFolder = Workspace:WaitForChild("Pets")
-local isClaimingEnabled = loadAutoClaim()
-local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-screenGui.ResetOnSpawn = false
-screenGui.Name = "DinoHelperUI"
 
-local toggleButton = Instance.new("TextButton", screenGui)
+-- ค่าตั้งต้นตอนเริ่มรอบนี้เท่านั้น (ไม่บันทึก)
+local isClaimingEnabled = false
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DinoHelperUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local toggleButton = Instance.new("TextButton")
 toggleButton.Size = UDim2.new(0, 240, 0, 50)
 toggleButton.Position = UDim2.new(0, 20, 0, 20)
 toggleButton.TextScaled = true
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 toggleButton.Draggable = true
+toggleButton.Parent = screenGui
 
 local function refresh()
     if isClaimingEnabled then
@@ -201,8 +209,7 @@ end)
 
 toggleButton.MouseButton1Click:Connect(function()
     isClaimingEnabled = not isClaimingEnabled
-    saveAutoClaim(isClaimingEnabled)
     refresh()
 end)
 
-warn("✅ Script Loaded! ใช้ getgenv().webhookUrl เพื่อกำหนด webhook ก่อนรัน ✅")
+warn("✅ Script Loaded! Anti-AFK เปิดแล้ว | Webhook ใช้ getgenv().webhookUrl เพื่อกำหนดก่อนรัน")
