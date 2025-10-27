@@ -1,13 +1,17 @@
 --======================================================
--- Dino Helper: Webhook + Anti-AFK + Toggle Auto-Claim + Manual Send
+-- Dino Helper (Delta-ready)
+-- Webhook + Anti-AFK + Toggle Auto-Claim + Auto Webhook ON/OFF + Manual Send
+-- + Extras: Like Islands, Online Pack, Claim Task_7/Task_8
+-- * ลูปทั้งหมดใช้ while เพื่อความเสถียรบน Delta
+-- * ไม่ส่งรายชื่อสัตว์ (Pets) — ส่งเฉพาะจำนวนรวม Total Pets
 --======================================================
 
--- 🔧 CONFIG (ตั้งก่อนรัน)
-getgenv().webhookUrl = getgenv().webhookUrl or "https://discord.com/api/webhooks/1426125399800156190/DK-PiYJr05tETLwtN5hYgevNSJOdwogQ2pAHsOelfqMusXS8YiC0Mdy_wKL2mvxZ6Rc6" -- << ใส่ของบอส
-getgenv().delay      = getgenv().delay or 300         -- วินาที ระหว่างส่งอัตโนมัติ
-getgenv().whitelist  = getgenv().whitelist or { Pets = {}, Eggs = {}, Fruits = {} }
-getgenv().fpsLimit   = getgenv().fpsLimit or 30       -- FPS cap
-getgenv().manualCooldown = getgenv().manualCooldown or 10 -- คูลดาวน์ปุ่มส่งเดี๋ยวนี้ (วินาที)
+-- 🔧 CONFIG (ตั้งก่อนรัน หรือ set ผ่านคอนโซลแล้วค่อย execute สคริปต์นี้)
+getgenv().webhookUrl      = getgenv().webhookUrl or " https://discord.com/api/webhooks/1426125399800156190/DK-PiYJr05tETLwtN5hYgevNSJOdwogQ2pAHsOelfqMusXS8YiC0Mdy_wKL2mvxZ6Rc6"
+getgenv().delay           = math.max(60, tonumber(getgenv().delay) or 300) -- ขั้นต่ำ 60 วินาที ป้องกันชน rate-limit
+getgenv().whitelist       = getgenv().whitelist or { Pets = {}, Eggs = {}, Fruits = {} }
+getgenv().fpsLimit        = getgenv().fpsLimit or 30
+getgenv().manualCooldown  = getgenv().manualCooldown or 10
 
 --======================================================
 -- Services
@@ -31,7 +35,7 @@ task.spawn(function()
 end)
 
 --======================================================
--- Pick request() or fallback PostAsync
+-- เลือก request() หรือ fallback PostAsync
 --======================================================
 local function getRequestFunc()
     local req = rawget(_G, "request") or rawget(_G, "http_request")
@@ -52,15 +56,6 @@ local request = getRequestFunc()
 --======================================================
 -- Helpers
 --======================================================
-local function safeLoop(interval, fn)
-    task.spawn(function()
-        while task.wait(interval) do
-            local ok, err = pcall(fn)
-            if not ok then warn("Loop error:", err) end
-        end
-    end)
-end
-
 local function getDataFolder()
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     return pg and pg:FindFirstChild("Data")
@@ -165,7 +160,7 @@ local function getFruitData(dataContainer)
 end
 
 --======================================================
--- 📨 Webhook Sender (ถูกเรียกได้ทั้งอัตโนมัติและกดปุ่ม)
+-- 📨 Webhook Sender (ไม่แสดงรายชื่อสัตว์)
 --======================================================
 local function sendWebhook()
     local dataFolder = getDataFolder()
@@ -174,7 +169,7 @@ local function sendWebhook()
         return warn("Invalid or missing webhookUrl")
     end
 
-    local petData, totalPets = getPetData(dataFolder)
+    local petData, totalPets = getPetData(dataFolder)  -- ใช้แค่ totalPets
     local eggData, totalEggs = getEggData(dataFolder)
     local fruitData         = getFruitData(dataFolder)
 
@@ -193,10 +188,11 @@ local function sendWebhook()
         if tl and tl.Text and #tl.Text > 0 then candyText = tl.Text end
     end)
 
+    -- ไม่ใส่รายละเอียด petData แล้ว เหลือแค่ Total Pets
     local description =
         "Money: " .. abbreviateNumber(moneyVal) ..
         "  Candy: " .. tostring(candyText) ..
-        "```" .. string.format("Total Pets: %s\n\n%s", thousands(totalPets), formatTable(petData)) .. "```" ..
+        "```" .. string.format("Total Pets: %s", thousands(totalPets)) .. "```" ..
         "\n```" .. string.format("Total Eggs: %s\n\n%s", thousands(totalEggs), formatTable(eggData)) .. "```" ..
         "\n```" .. formatTable(fruitData) .. "```"
 
@@ -211,7 +207,7 @@ local function sendWebhook()
         })
     end)
     if ok then
-        print("📤 send")
+        print("📤 Webhook sent")
         pcall(function() StarterGui:SetCore("SendNotification", {Title="Dino Helper", Text="ส่ง Webhook แล้ว ✔", Duration=2}) end)
     else
         warn("⚠️ webhook error:", err)
@@ -220,17 +216,80 @@ local function sendWebhook()
 end
 
 --======================================================
--- 🛡 Anti-AFK
+-- 🛡 Anti-AFK (Delta-ready | Multi-Strategy + Randomized)
 --======================================================
 do
-    local vu = game:GetService("VirtualUser")
-    Players.LocalPlayer.Idled:Connect(function()
+    local Players                = game:GetService("Players")
+    local LocalPlayer            = Players.LocalPlayer
+    local VirtualUser            = game:GetService("VirtualUser")
+    local VirtualInputManager    = game:GetService("VirtualInputManager")
+    local RunService             = game:GetService("RunService")
+
+    -- seed สุ่มรอบเวลาให้ไม่ตายตัว
+    pcall(function() math.randomseed(os.clock()*1e6 % 1e6) end)
+
+    local function pressSpaceQuick()
         pcall(function()
-            vu:CaptureController()
-            vu:ClickButton2(Vector2.new())
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+            task.wait(0.05)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
         end)
+    end
+
+    local function softMouseClick()
+        -- คลิกซ้าย + คลิกขวา เบา ๆ ที่หน้าจอ (พิกัด 0,0 ก็พอ แค่ให้เกิดอินพุต)
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)  -- left down
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0) -- left up
+        end)
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 1, true, game, 0)  -- right down
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 1, false, game, 0) -- right up
+        end)
+    end
+
+    local function vuNudge()
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new()) -- คลิกขวาแบบ VirtualUser
+        end)
+    end
+
+    local function tinyCameraNudge()
+        pcall(function()
+            local cam = workspace.CurrentCamera
+            if not cam then return end
+            local cf = cam.CFrame
+            -- หมุนกล้องเบา ๆ แล้วหมุนกลับ (ไม่ทำให้เวียนหัว)
+            cam.CFrame = cf * CFrame.Angles(0, math.rad(1.5), 0)
+            RunService.Heartbeat:Wait()
+            cam.CFrame = cf
+        end)
+    end
+
+    local function doAntiAFKTtick()
+        -- สลับวิธีเพื่อลดโอกาสโดนจับแพทเทิร์น
+        vuNudge()
+        softMouseClick()
+        pressSpaceQuick()
+        tinyCameraNudge()
+    end
+
+    -- เมื่อเกมตรวจจับ Idle ให้ยิงทันทีรอบหนึ่ง
+    Players.LocalPlayer.Idled:Connect(function()
+        doAntiAFKTtick()
     end)
-    warn("🛡️ Anti-AFK enabled")
+
+    -- ลูปกันหลุดแบบสุ่มช่วงเวลา (40–70 วิ) เพื่อความเป็นธรรมชาติ
+    task.spawn(function()
+        while true do
+            local waitSec = math.random(40, 70)
+            for _ = 1, waitSec do task.wait(1) end
+            doAntiAFKTtick()
+        end
+    end)
+
+    warn("🛡️ Anti-AFK (multi-strategy) enabled")
 end
 
 --======================================================
@@ -243,7 +302,7 @@ screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local container = Instance.new("Frame")
 container.Name = "ControlPanel"
-container.Size = UDim2.new(0, 260, 0, 140)
+container.Size = UDim2.new(0, 260, 0, 190) -- สูงพอ 3 ปุ่ม + label
 container.Position = UDim2.new(0, 20, 0, 20)
 container.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 container.BorderSizePixel = 0
@@ -339,40 +398,98 @@ sendButton.MouseButton1Click:Connect(function()
     end)
 end)
 
+-- ปุ่ม Auto Webhook ON/OFF
+local autoSendEnabled = true
+local autoBtn = mkButton("🟢 Auto Webhook: ON", 130, Color3.fromRGB(50, 160, 80))
+local function refreshAutoBtn()
+    if autoSendEnabled then
+        autoBtn.Text = "🟢 Auto Webhook: ON"
+        autoBtn.BackgroundColor3 = Color3.fromRGB(50, 160, 80)
+    else
+        autoBtn.Text = "🔴 Auto Webhook: OFF"
+        autoBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+    end
+end
+autoBtn.MouseButton1Click:Connect(function()
+    autoSendEnabled = not autoSendEnabled
+    refreshAutoBtn()
+end)
+refreshAutoBtn()
+
+-- ป้ายนับถอยหลังออโต้
+local countdown = Instance.new("TextLabel")
+countdown.Size = UDim2.new(1, -20, 0, 18)
+countdown.Position = UDim2.new(0, 10, 0, 172)
+countdown.BackgroundTransparency = 1
+countdown.TextColor3 = Color3.fromRGB(220, 220, 220)
+countdown.Font = Enum.Font.SourceSans
+countdown.TextScaled = true
+countdown.Text = "Auto webhook: --s"
+countdown.Parent = container
+
 --======================================================
--- วนเคลมเงินจาก Pets ของเรา เมื่อเปิดใช้งาน
+-- ลูประบบต่าง ๆ (Delta-friendly)
 --======================================================
-local petFolder = Workspace:FindFirstChild("Pets") or Workspace:WaitForChild("Pets")
-safeLoop(3, function()
-    if not isClaimingEnabled then return end
-    if not petFolder then return end
-    for _, pet in pairs(petFolder:GetChildren()) do
-        local petUser = pet:GetAttribute("UserId")
-        if petUser == LocalPlayer.UserId and pet:FindFirstChild("RE") then
-            pcall(function() pet.RE:FireServer("Claim") end)
+
+-- 1) Auto-Claim Pets (ทุก 3 วิ เมื่อเปิดใช้งาน)
+task.spawn(function()
+    local petFolder = Workspace:FindFirstChild("Pets") or Workspace:WaitForChild("Pets")
+    while true do
+        task.wait(3)
+        if isClaimingEnabled and petFolder then
+            for _, pet in ipairs(petFolder:GetChildren()) do
+                local petUser = pet:GetAttribute("UserId")
+                if petUser == LocalPlayer.UserId and pet:FindFirstChild("RE") then
+                    pcall(function() pet.RE:FireServer("Claim") end)
+                end
+            end
         end
     end
 end)
 
---======================================================
--- วงส่ง Webhook อัตโนมัติ
---======================================================
-safeLoop(getgenv().delay, sendWebhook)
+-- 2) Auto Webhook (จับเวลาแม่นยำ + เปิด/ปิดได้)
+task.spawn(function()
+    local delaySec = getgenv().delay
+    local nextSend = os.clock() + delaySec
+    local sending = false
+    while true do
+        task.wait(1)
+        if autoSendEnabled then
+            local remain = math.max(0, math.floor(nextSend - os.clock()))
+            countdown.Text = "Auto webhook: "..tostring(remain).."s"
+            if not sending and os.clock() >= nextSend then
+                sending = true
+                local ok, err = pcall(sendWebhook)
+                if not ok then
+                    warn("Auto webhook error:", err)
+                    pcall(function() StarterGui:SetCore("SendNotification", {Title="Dino Helper", Text="ส่งออโต้ผิดพลาด ดูคอนโซล", Duration=2.5}) end)
+                else
+                    pcall(function() StarterGui:SetCore("SendNotification", {Title="Dino Helper", Text="ส่งออโต้แล้ว ✔", Duration=2}) end)
+                end
+                nextSend = os.clock() + delaySec
+                sending = false
+            end
+        else
+            countdown.Text = "Auto webhook: OFF"
+        end
+    end
+end)
 
---======================================================
--- Extra: ไลก์เกาะอื่นทุก ~70 วินาที
---======================================================
+-- 3) Extra: ไลก์เกาะอื่นทุก ~70 วิ
 task.spawn(function()
     local base = Workspace:FindFirstChild("Art")
     if not base then return end
-    while task.wait(0.3) do
+    while true do
+        -- สแกนเร็ว ๆ ทุก 0.3 วิ แล้วพักยาว 70 วิ หลังจบหนึ่งรอบ
         local client = LocalPlayer:GetAttribute("AssignedIslandName")
         for _, v in pairs(base:GetChildren()) do
             if v.Name ~= client then
                 local Occply = v:GetAttribute("OccupyingPlayerId")
                 if Occply ~= nil then
                     local args = {"GiveLike", tonumber(Occply)}
-                    ReplicatedStorage:WaitForChild("Remote"):WaitForChild("CharacterRE"):FireServer(unpack(args))
+                    pcall(function()
+                        ReplicatedStorage:WaitForChild("Remote"):WaitForChild("CharacterRE"):FireServer(unpack(args))
+                    end)
                 end
             end
         end
@@ -380,29 +497,29 @@ task.spawn(function()
     end
 end)
 
---======================================================
--- Extra: onlinepack เมื่อ remain == 0
---======================================================
+-- 4) Extra: onlinepack เมื่อ remain == 0
 task.spawn(function()
-    while task.wait(1) do
+    while true do
+        task.wait(1)
         local remain = tonumber(LocalPlayer:GetAttribute("DinoEventOnlineRemainSecond")) or 0
         if remain == 0 then
-            ReplicatedStorage:WaitForChild("Remote"):WaitForChild("DinoEventRE"):FireServer({{ event = "onlinepack" }})
+            pcall(function()
+                ReplicatedStorage:WaitForChild("Remote"):WaitForChild("DinoEventRE"):FireServer({{ event = "onlinepack" }})
+            end)
             task.wait(3)
         end
     end
 end)
 
---======================================================
--- Extra: เคลม Task_7 และ Task_8 ทุก 60 วินาที
---======================================================
+-- 5) Extra: เคลม Task_7 และ Task_8 ทุก 60 วิ
 task.spawn(function()
-    while task.wait(60) do
+    while true do
+        task.wait(60)
         local r = ReplicatedStorage:WaitForChild("Remote"):WaitForChild("DinoEventRE")
-        r:FireServer({{ event = "claimreward", id = "Task_7" }})
+        pcall(function() r:FireServer({{ event = "claimreward", id = "Task_7" }}) end)
         task.wait(3)
-        r:FireServer({{ event = "claimreward", id = "Task_8" }})
+        pcall(function() r:FireServer({{ event = "claimreward", id = "Task_8" }}) end)
     end
 end)
 
-warn("✅ Dino Helper Loaded!  |  ปุ่มอยู่ที่มุมซ้ายบน ลากได้ทั้งกล่อง")
+warn("✅ Dino Helper Loaded! | ปุ่มอยู่มุมซ้ายบน ลากได้ทั้งกล่อง")
