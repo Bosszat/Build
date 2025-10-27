@@ -23,7 +23,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace         = game:GetService("Workspace")
 local UIS               = game:GetService("UserInputService")
 local StarterGui        = game:GetService("StarterGui")
-
+local displayName       = LocalPlayer.DisplayName or "Unknown"
+local realName          = LocalPlayer.Name or "Unknown"
+local nameHeader        = string.format("**%s (%s)**", realName, displayName)
 --======================================================
 -- FPS cap (ถ้ามี)
 --======================================================
@@ -196,7 +198,7 @@ local function sendWebhook()
         "\n```" .. string.format("Total Eggs: %s\n\n%s", thousands(totalEggs), formatTable(eggData)) .. "```" ..
         "\n```" .. formatTable(fruitData) .. "```"
 
-    local payload = HttpService:JSONEncode({ embeds = {{ title = LocalPlayer.Name, description = description }} })
+    local payload = HttpService:JSONEncode({ embeds = {{ title = nameHeader, description = description }} })
 
     local ok, err = pcall(function()
         request({
