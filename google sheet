@@ -1,0 +1,164 @@
+-- 🎒 Roblox → Google Sheet (อัปเดตทุก 5 วิ)
+-- ✅ ไม่เพิ่มซ้ำ แต่แก้ไขแถวเดิมแทน
+-- 🧠 by Phakaphop GPT-5 Pro (with Coins)
+
+---------------------------------------------------
+local GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySnPSDKKzRirKxXDmgZOJn1y2VH1GAL7dn27DDcXBZVkN0WAluGc8xG3ehIQ9bJhBgOQ/exec"
+
+-- 🎯 ตั้งค่าชื่อบัพและไข่ที่ต้องการให้ส่ง
+local ALLOWED_STATUS = { "Halloween", "Snow" }
+local ALLOWED_EGGS = {
+	"GeneralKongEgg", "GodzillaEgg", "UnicornProEgg", "SaberCubEgg",
+	"HalloweenEgg", "SailfishEgg", "OctopusEgg", "MetroGiraffeEgg", "UnicornEgg"
+}
+
+---------------------------------------------------
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+
+local RARITY_ICONS = {
+	Normal = "⚪", Golden = "✨", Diamond = "💎", Electric = "⚡",
+	Fire = "🔥", Jurassic = "🦖", Snow = "❄️", Halloween = "🎃"
+}
+
+---------------------------------------------------
+-- 💰 แปลงตัวเลขเป็น M / B / T / Q
+---------------------------------------------------
+local function formatNumber(num)
+	if num >= 1e15 then
+		return string.format("%.2fQ", num / 1e15)
+	elseif num >= 1e12 then
+		return string.format("%.2fT", num / 1e12)
+	elseif num >= 1e9 then
+		return string.format("%.2fB", num / 1e9)
+	elseif num >= 1e6 then
+		return string.format("%.2fM", num / 1e6)
+	elseif num >= 1e3 then
+		return string.format("%.0fK", num / 1e3)
+	else
+		return tostring(num)
+	end
+end
+
+---------------------------------------------------
+-- 💰 ดึงค่า Coins
+---------------------------------------------------
+local function getPlayerCoins()
+	local coinsValue = 0
+	-- ลองค้นใน leaderstats หรือ Data
+	if localPlayer:FindFirstChild("leaderstats") then
+		local coinStat = localPlayer.leaderstats:FindFirstChild("Coins") or localPlayer.leaderstats:FindFirstChild("Coin")
+		if coinStat and tonumber(coinStat.Value) then
+			coinsValue = tonumber(coinStat.Value)
+		end
+	elseif localPlayer:FindFirstChild("PlayerData") then
+		local coinStat = localPlayer.PlayerData:FindFirstChild("Coins")
+		if coinStat and tonumber(coinStat.Value) then
+			coinsValue = tonumber(coinStat.Value)
+		end
+	end
+	return coinsValue
+end
+
+---------------------------------------------------
+-- 📦 ดึงข้อมูลไข่
+---------------------------------------------------
+local function getDataFolder()
+	return localPlayer:FindFirstChild("PlayerGui") and localPlayer.PlayerGui:FindFirstChild("Data")
+end
+
+local function isAllowedStatus(status)
+	for _, s in ipairs(ALLOWED_STATUS) do
+		if s == status then return true end
+	end
+	return false
+end
+
+local function isAllowedEgg(eggName)
+	for _, n in ipairs(ALLOWED_EGGS) do
+		if n == eggName then return true end
+	end
+	return false
+end
+
+local function getEggData(folder)
+	local eggs_with_status = {}
+	local total = 0
+	local eggFolder = folder and folder:FindFirstChild("Egg")
+
+	if eggFolder then
+		for _, e in ipairs(eggFolder:GetChildren()) do
+			if e:IsA("Configuration") and not e:GetAttribute("D") then
+				local egg_name = e:GetAttribute("T")
+				local status = e:GetAttribute("M") or e:GetAttribute("Status") or e:GetAttribute("Buff") or "Normal"
+				if egg_name and isAllowedEgg(egg_name) and isAllowedStatus(status) then
+					local icon = RARITY_ICONS[status] or "⚪"
+					local key = string.format("%s (%s %s)", egg_name, icon, status)
+					eggs_with_status[key] = (eggs_with_status[key] or 0) + 1
+					total += 1
+				end
+			end
+		end
+	end
+	return eggs_with_status, total
+end
+
+---------------------------------------------------
+-- 📤 ส่งข้อมูลไป Google Apps Script
+---------------------------------------------------
+local function sendToGoogleScript(username, eggText, coinsText)
+	local data = { user = username, eggs = eggText, coins = coinsText }
+	local jsonData = HttpService:JSONEncode(data)
+
+	local success, response = pcall(function()
+		local req = {
+			Url = GOOGLE_SCRIPT_URL,
+			Method = "POST",
+			Headers = { ["Content-Type"] = "application/json" },
+			Body = jsonData
+		}
+		if syn and syn.request then return syn.request(req)
+		elseif request then return request(req)
+		elseif http_request then return http_request(req)
+		end
+	end)
+
+	if success and response then
+		print(string.format("✅ ส่งข้อมูลสำเร็จ (%s) | 💰 %s | สถานะ: %s", username, coinsText, response.StatusCode))
+	else
+		warn("❌ ส่งไม่สำเร็จ:", response)
+	end
+end
+
+---------------------------------------------------
+-- 🔁 Loop ทุก ๆ 5 วิ
+---------------------------------------------------
+task.spawn(function()
+	while task.wait(5) do
+		local folder = getDataFolder()
+		if folder then
+			local eggs_with_status = getEggData(folder)
+			local names = {}
+			for k in pairs(eggs_with_status) do table.insert(names, k) end
+			table.sort(names)
+
+			local eggTextParts = {}
+			for _, name in ipairs(names) do
+				table.insert(eggTextParts, string.format("%s × %d", name, eggs_with_status[name]))
+			end
+
+			local eggText = table.concat(eggTextParts, ", ")
+			if eggText == "" then eggText = "ไม่มีไข่และบัพที่ตั้งค่า" end
+
+			local coinsValue = getPlayerCoins()
+			local coinsText = formatNumber(coinsValue)
+
+			sendToGoogleScript(localPlayer.Name, eggText, coinsText)
+		else
+			warn("⚠️ ยังไม่พบข้อมูล Inventory")
+		end
+	end
+end)
+
+print("🥚 ระบบอัปเดตไข่ + เงินทุก 5 วิเริ่มทำงานแล้ว...")
