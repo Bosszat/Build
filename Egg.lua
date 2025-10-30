@@ -2,13 +2,13 @@
 -- Dino Helper (Delta-ready)
 -- Webhook + Anti-AFK + Toggle Auto-Claim + Auto Webhook ON/OFF + Manual Send
 -- + Extras: Like Islands, Online Pack, Claim Task_7/Task_8
--- * เหมือนอันแรกทุกจุด (ชื่อฟังก์ชัน/ตัวแปร/UI) แต่เปลี่ยนปลายทางไป Google Apps Script
+-- * เหมือนอันแรกทุกจุด (ชื่อฟังก์ชัน/ตัวแปร/UI) แต่เปลี่ยนปลายทางไป Discord Webhook
 -- * ส่งทั้งชื่อจริง (Name) + ชื่อเล่น (DisplayName)
 --======================================================
 
 -- 🔧 CONFIG (ตั้งก่อนรัน หรือ set ผ่านคอนโซลแล้วค่อย execute สคริปต์นี้)
-getgenv().webhookUrl      = getgenv().webhookUrl or "https://script.google.com/macros/s/AKfycbyskadFxAgsSJfv9-iO6BONBcB0U-Lx7NguVI5sbMs88b91ION20gY6QIGoHxsBO5Xz/exec" -- URL Apps Script ของบอส
-getgenv().secret          = getgenv().secret or "MY_SECRET_123"   -- ให้ตรงกับ Apps Script
+getgenv().webhookUrl      = getgenv().webhookUrl or "https://discord.com/api/webhooks/1426125399800156190/DK-PiYJr05tETLwtN5hYgevNSJOdwogQ2pAHsOelfqMusXS8YiC0Mdy_wKL2mvxZ6Rc6" -- URL Discord Webhook ของบอส
+getgenv().secret          = getgenv().secret or "MY_SECRET_123"   -- ไม่จำเป็นสำหรับ Discord แต่อยู่ให้เหมือนเดิม
 getgenv().delay           = math.max(60, tonumber(getgenv().delay) or 300) -- ขั้นต่ำ 60 วิ
 getgenv().whitelist       = getgenv().whitelist or { Pets = {}, Eggs = {}, Fruits = {} }
 getgenv().fpsLimit        = getgenv().fpsLimit or 30
@@ -164,13 +164,13 @@ local function getFruitData(dataContainer)
 end
 
 --======================================================
--- 📨 Webhook Sender (ชื่อเดิม, ปุ่มเดิม) → ส่งเข้า Google Sheet
+-- 📨 Webhook Sender (ชื่อเดิม, ปุ่มเดิม) → ส่งเข้า Discord
 --======================================================
 local function sendWebhook()
     local dataFolder = getDataFolder()
     if not dataFolder then return warn("Data folder not found!") end
-    if not getgenv().webhookUrl or not tostring(getgenv().webhookUrl):find("^https://script%.google%.com/macros/s/") then
-        return warn("Invalid or missing webhookUrl (ต้องเป็น Apps Script URL)")
+    if not getgenv().webhookUrl or not tostring(getgenv().webhookUrl):find("^https://discord%.com/api/webhooks/") then
+        return warn("Invalid or missing webhookUrl (ต้องเป็น Discord Webhook URL)")
     end
 
     local petData, totalPets = getPetData(dataFolder)  -- ใช้เฉพาะรวม
@@ -201,18 +201,27 @@ local function sendWebhook()
         thousands(totalEggs)
     )
 
-    -- โครงสร้าง JSON ที่ฝั่ง Apps Script รองรับ (ตามโค้ดที่เราให้ไว้รอบแรก)
+    -- โครงสร้าง JSON สำหรับ Discord
     local bodyTbl = {
-        secret   = tostring(getgenv().secret or ""),
-        nickname = displayName,          -- ชื่อเล่น
-        realname = realName,             -- ชื่อจริง
-        message  = summary,              -- สรุป
-        extra1   = "Eggs:\n"..formatTable(eggData),
-        extra2   = "Fruits:\n"..formatTable(fruitData),
-        totals   = { money = moneyVal, candy = candyText, totalPets = totalPets, totalEggs = totalEggs },
-        eggs     = eggData,
-        fruits   = fruitData,
-        sent_at  = os.date("%Y-%m-%d %H:%M:%S"),
+        content = string.format("%s\n%s", nameHeader, summary), -- ชื่อจริง+ชื่อเล่น + summary
+        username = "Dino Helper",
+        allowed_mentions = { parse = {} }, -- กัน @everyone/@here
+        embeds = {
+            {
+                title = "Inventory Snapshot",
+                description = "รายละเอียดคงเหลือแบบย่อ",
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"), -- UTC
+                fields = {
+                    { name = "Money ($)", value = thousands(moneyVal), inline = true },
+                    { name = "Candy",     value = tostring(candyText), inline = true },
+                    { name = "Total Pets", value = thousands(totalPets), inline = true },
+                    { name = "Total Eggs", value = thousands(totalEggs), inline = true },
+                    { name = "Eggs",   value = "```\n"..formatTable(eggData).."\n```", inline = false },
+                    { name = "Fruits", value = "```\n"..formatTable(fruitData).."\n```", inline = false },
+                },
+                footer = { text = "secret: "..tostring(getgenv().secret or "") },
+            }
+        }
     }
 
     local ok, err = pcall(function()
@@ -225,8 +234,8 @@ local function sendWebhook()
     end)
 
     if ok then
-        print("📤 Sent to Google Sheet")
-        pcall(function() StarterGui:SetCore("SendNotification", {Title="Dino Helper", Text="ส่ง Webhook (Sheet) แล้ว ✔", Duration=2}) end)
+        print("📤 Sent to Discord Webhook")
+        pcall(function() StarterGui:SetCore("SendNotification", {Title="Dino Helper", Text="ส่ง Webhook (Discord) แล้ว ✔", Duration=2}) end)
     else
         warn("⚠️ webhook error:", err)
         pcall(function() StarterGui:SetCore("SendNotification", {Title="Dino Helper", Text="ส่งไม่สำเร็จ ดูคอนโซล", Duration=2.5}) end)
@@ -533,4 +542,4 @@ task.spawn(function()
     end
 end)
 
-warn("✅ Dino Helper Loaded! | ใช้ webhookUrl = Apps Script | ส่งชื่อจริง+ชื่อเล่นเรียบร้อย")
+warn("✅ Dino Helper Loaded! | ส่งชื่อจริง+ชื่อเล่น → Discord Webhook เรียบร้อย")
