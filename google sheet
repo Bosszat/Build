@@ -45,21 +45,9 @@ end
 -- 💰 ดึงค่า Coins
 ---------------------------------------------------
 local function getPlayerCoins()
-	local coinsValue = 0
-	-- ลองค้นใน leaderstats หรือ Data
-	if localPlayer:FindFirstChild("leaderstats") then
-		local coinStat = localPlayer.leaderstats:FindFirstChild("Coins") or localPlayer.leaderstats:FindFirstChild("Coin")
-		if coinStat and tonumber(coinStat.Value) then
-			coinsValue = tonumber(coinStat.Value)
-		end
-	elseif localPlayer:FindFirstChild("PlayerData") then
-		local coinStat = localPlayer.PlayerData:FindFirstChild("Coins")
-		if coinStat and tonumber(coinStat.Value) then
-			coinsValue = tonumber(coinStat.Value)
-		end
-	end
-	return coinsValue
+	return game:GetService("Players").LocalPlayer.leaderstats["Money $"].Value
 end
+
 
 ---------------------------------------------------
 -- 📦 ดึงข้อมูลไข่
