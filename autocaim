@@ -1,5 +1,5 @@
 
-getgenv().autoCollect = false -- เปิด/ปิด Auto Collect
+getgenv().autoCollect = false 
 
 
 pcall(function()
