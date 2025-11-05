@@ -1,0 +1,103 @@
+-- ================== CONFIG ==================
+local IDLE_SECONDS = 1        -- ไม่มีอินพุตกี่วิถึงจะเข้าสู่โหมดจอขาว
+local FPS_IDLE     = 5          -- FPS ตอนว่าง (ลด CPU)
+local FPS_ACTIVE   = 60      -- FPS ตอนปกติ
+-- ============================================
+
+local RunService = game:GetService("RunService")
+local UIS        = game:GetService("UserInputService")
+
+-- helper: fpscap (บาง executor ไม่มี)
+local function setcap(n) pcall(function() setfpscap(n) end) end
+
+-- สร้าง/หา UI สีขาว
+local function getWhiteGui()
+    local parent = (gethui and gethui()) or game.CoreGui
+    local g = parent:FindFirstChild("WhiteIdleCover")
+    if not g then
+        g = Instance.new("ScreenGui")
+        g.Name = "WhiteIdleCover"
+        g.IgnoreGuiInset = true
+        g.ResetOnSpawn = false
+        g.DisplayOrder = 2^31-1
+        g.Parent = parent
+
+        local f = Instance.new("Frame")
+        f.Name = "Cover"
+        f.Size = UDim2.new(1,0,1,0)
+        f.BackgroundColor3 = Color3.new(1,1,1)
+        f.BackgroundTransparency = 1
+        f.Parent = g
+    end
+    return g
+end
+
+local inIdle = false
+local lastInputTime = os.clock()
+
+local function enterIdle()
+    if inIdle then return end
+    inIdle = true
+    -- ปิดเรนเดอร์ 3D และลด FPS
+    pcall(function() RunService:Set3dRenderingEnabled(false) end)
+    setcap(FPS_IDLE)
+
+    local g = getWhiteGui()
+    local cover = g:FindFirstChild("Cover")
+    g.Enabled = true
+    -- fade in ให้เห็นว่าทำงาน
+    for a = cover.BackgroundTransparency, 0, -0.1 do
+        cover.BackgroundTransparency = a
+        task.wait(0.02)
+    end
+end
+
+local function exitIdle()
+    if not inIdle then return end
+    inIdle = false
+    -- เปิดเรนเดอร์ 3D และคืน FPS
+    pcall(function() RunService:Set3dRenderingEnabled(true) end)
+    setcap(FPS_ACTIVE)
+
+    local g = getWhiteGui()
+    local cover = g:FindFirstChild("Cover")
+    -- fade out แล้วปิด
+    for a = cover.BackgroundTransparency, 1, 0.1 do
+        cover.BackgroundTransparency = a
+        task.wait(0.02)
+    end
+    g.Enabled = false
+end
+
+-- อัปเดตเวลาเมื่อมีอินพุตใด ๆ
+local function bump()
+    lastInputTime = os.clock()
+    if inIdle then
+        -- เงื่อนไขบอส: "คลิกจอทีนึงกลับปกติ"
+        exitIdle()
+    end
+end
+
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    bump()
+end)
+UIS.InputChanged:Connect(function(input, gpe)
+    if gpe then return end
+    -- เคลื่อนไหวเมาส์/จอย ก็ถือว่ามีการใช้งาน
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+       or input.UserInputType == Enum.UserInputType.Touch
+       or input.UserInputType == Enum.UserInputType.Gamepad1 then
+        bump()
+    end
+end)
+
+-- ลูปตรวจจับความว่าง
+task.spawn(function()
+    while true do
+        if not inIdle and (os.clock() - lastInputTime) >= IDLE_SECONDS then
+            enterIdle()
+        end
+        task.wait(0.2)
+    end
+end)
