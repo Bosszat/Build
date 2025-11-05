@@ -1,12 +1,5 @@
---======================================================
--- Dino Helper (Delta-ready)
--- Webhook + Anti-AFK + Toggle Auto-Claim + Auto Webhook ON/OFF + Manual Send
--- + Extras: Like Islands, Online Pack, Claim Task_7/Task_8
--- * เหมือนอันแรกทุกจุด (ชื่อฟังก์ชัน/ตัวแปร/UI) แต่เปลี่ยนปลายทางไป Discord Webhook
--- * ส่งทั้งชื่อจริง (Name) + ชื่อเล่น (DisplayName)
---======================================================
 
--- 🔧 CONFIG (ตั้งก่อนรัน หรือ set ผ่านคอนโซลแล้วค่อย execute สคริปต์นี้)
+
 getgenv().webhookUrl      = getgenv().webhookUrl or "https://discord.com/api/webhooks/1426125399800156190/DK-PiYJr05tETLwtN5hYgevNSJOdwogQ2pAHsOelfqMusXS8YiC0Mdy_wKL2mvxZ6Rc6" -- URL Discord Webhook ของบอส
 getgenv().secret          = getgenv().secret or "MY_SECRET_123"   -- ไม่จำเป็นสำหรับ Discord แต่อยู่ให้เหมือนเดิม
 getgenv().delay           = math.max(60, tonumber(getgenv().delay) or 300) -- ขั้นต่ำ 60 วิ
@@ -27,6 +20,10 @@ local StarterGui        = game:GetService("StarterGui")
 local displayName       = LocalPlayer.DisplayName or "Unknown"  -- ชื่อเล่น
 local realName          = LocalPlayer.Name or "Unknown"         -- ชื่อจริง
 local nameHeader        = string.format("**%s (%s)**", realName, displayName)
+
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
 
 --======================================================
 -- FPS cap (ถ้ามี)
@@ -303,23 +300,7 @@ local function mkButton(text, y, color)
     return b
 end
 
--- ปุ่ม Toggle Auto-Claim
-local isClaimingEnabled = false
-local toggleButton = mkButton("🔴 ปิดใช้งานเก็บเงินออโต้", 30, Color3.fromRGB(200, 50, 50))
-local function refreshToggle()
-    if isClaimingEnabled then
-        toggleButton.Text = "🟢 เปิดใช้งานเก็บเงินออโต้"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-    else
-        toggleButton.Text = "🔴 ปิดใช้งานเก็บเงินออโต้"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    end
-end
-toggleButton.MouseButton1Click:Connect(function()
-    isClaimingEnabled = not isClaimingEnabled
-    refreshToggle()
-end)
-refreshToggle()
+
 
 -- ปุ่ม ส่ง Webhook เดี๋ยวนี้ (ชื่อเหมือนอันแรก)
 local sendButton = mkButton("🚀 ส่ง Webhook เดี๋ยวนี้", 80, Color3.fromRGB(50, 100, 200))
@@ -382,21 +363,54 @@ countdown.Parent = container
 -- ลูประบบต่าง ๆ (Delta-friendly)
 --======================================================
 
--- 1) Auto-Claim Pets (ทุก 3 วิ เมื่อเปิดใช้งาน)
-task.spawn(function()
-    local petFolder = Workspace:FindFirstChild("Pets") or Workspace:WaitForChild("Pets")
-    while true do
-        task.wait(3)
-        if isClaimingEnabled and petFolder then
-            for _, pet in ipairs(petFolder:GetChildren()) do
-                local petUser = pet:GetAttribute("UserId")
-                if petUser == LocalPlayer.UserId and pet:FindFirstChild("RE") then
-                    pcall(function() pet.RE:FireServer("Claim") end)
-                end
-            end
-        end
-    end
+
+getgenv().autoCollect = false -- เปิด/ปิด Auto Collect
+
+
+pcall(function()
+    local virtualUser = game:GetService("VirtualUser")
+    game:GetService("Players").LocalPlayer.Idled:Connect(function()
+        virtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        virtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        print("⚠️ Anti-AFK activated!")
+    end)
 end)
+
+
+
+task.spawn(function()
+	while task.wait(0.1) do
+		if autoCollect then
+			for _, pet in ipairs(Workspace.Pets:GetChildren()) do
+				if pet:GetAttribute("UserId") == LocalPlayer.UserId then
+					firetouchinterest(HumanoidRootPart, pet, 1)
+					task.wait(0.1)
+					firetouchinterest(HumanoidRootPart, pet, 0)
+				end
+			end
+		end
+	end
+end)
+
+--  UI 
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local ToggleButton = Instance.new("TextButton", ScreenGui)
+ToggleButton.Size = UDim2.new(0, 120, 0, 40)
+ToggleButton.Position = UDim2.new(0, 50, 0, 100)
+ToggleButton.BackgroundColor3 = Color3.new(0.2, 0.4, 0.6)
+ToggleButton.Text = "Auto Collect: OFF"
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 18
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+
+ToggleButton.MouseButton1Click:Connect(function()
+	getgenv().autoCollect = not getgenv().autoCollect
+	ToggleButton.Text = "Auto Collect: " .. (autoCollect and "ON" or "OFF")
+	ToggleButton.BackgroundColor3 = autoCollect and Color3.new(0, 0.8, 0.2) or Color3.new(0.8, 0, 0)
+end)
+
+
 
 -- 2) Auto Webhook (ชื่อเดิม, ทำงานเหมือนเดิม)
 task.spawn(function()
