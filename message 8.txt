@@ -12,6 +12,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/TinySenpaiz/TinyHub/r
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/google%20sheet"))()
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/autocaim"))()
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/Egg.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/autocaim"))()
+
 
