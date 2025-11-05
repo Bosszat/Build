@@ -2,3 +2,5 @@ https://www.mediafire.com/file/rlt51ei2zjx8d1n/loader.sh/file?hash=l7tbasMnHija5
 
 
 termux-setup-storage && mv /sdcard/Download/loader.sh ~/ && sed -i 's/\r$//' ~/loader.sh && chmod +x ~/loader.sh && ./loader.sh
+
+https://www.mediafire.com/file/nyjbwb3hzlwqrvf/Roblox.settings/file
