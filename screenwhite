@@ -73,7 +73,7 @@ end
 local function bump()
     lastInputTime = os.clock()
     if inIdle then
-        -- เงื่อนไขบอส: "คลิกจอทีนึงกลับปกติ"
+        --  "คลิกจอทีนึงกลับปกติ"
         exitIdle()
     end
 end
