@@ -7,10 +7,10 @@ local FPS_ACTIVE   = 60      -- FPS ตอนปกติ
 local RunService = game:GetService("RunService")
 local UIS        = game:GetService("UserInputService")
 
--- helper: fpscap (บาง executor ไม่มี)
+-- helper: fpscap 
 local function setcap(n) pcall(function() setfpscap(n) end) end
 
--- สร้าง/หา UI สีขาว
+-- UI สีขาว
 local function getWhiteGui()
     local parent = (gethui and gethui()) or game.CoreGui
     local g = parent:FindFirstChild("WhiteIdleCover")
