@@ -8,7 +8,7 @@ local GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySnPSDKKzRir
 -- 🎯 ตั้งค่าชื่อบัพและไข่ที่ต้องการให้ส่ง
 local ALLOWED_STATUS = { "Halloween", "Snow" }
 local ALLOWED_EGGS = {
-	"GeneralKongEgg", "GodzillaEgg", "UnicornProEgg", "SaberCubEgg",
+	"GreenStormEgg","AxeSharkEgg","GeneralKongEgg", "GodzillaEgg", "UnicornProEgg", "SaberCubEgg",
 	"HalloweenEgg", "SailfishEgg", "OctopusEgg", "MetroGiraffeEgg", "UnicornEgg"
 }
 
