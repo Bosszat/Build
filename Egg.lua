@@ -1,5 +1,5 @@
 
-getgenv().autoCollect = false -- เปิด/ปิด Auto Collect
+
 getgenv().webhookUrl = "https://discord.com/api/webhooks/1426125319173312512/RNARiWMk90CSwn89ypi8Gv_lufMnJff3zu4_RCAsvF96XXVWwzPLp0RzSgMS8Ml0JY78"
 getgenv().delay = 300 
 getgenv().whitelist = {
@@ -15,16 +15,6 @@ local Workspace = game:GetService("Workspace")
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
-
-pcall(function()
-    local virtualUser = game:GetService("VirtualUser")
-    game:GetService("Players").LocalPlayer.Idled:Connect(function()
-        virtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        virtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-        print("⚠️ Anti-AFK activated!")
-    end)
-end)
 
 
 
