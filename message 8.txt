@@ -8,13 +8,14 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/104mapleoof-max/roblo
 
 https://www.roblox.com/games/105555311806207/Build-a-Zoo-Halloween?privateServerLinkCode=48077041651546798252572770100371
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/TinySenpaiz/TinyHub/refs/heads/main/TinyHub.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/Egg.lua"))()
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/google%20sheet"))()
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/autocaim"))()
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Bosszat/Build/refs/heads/main/screenwhite"))()
+
 
 
 
