@@ -1,6 +1,4 @@
--- 🎒 Roblox → Google Sheet (อัปเดตทุก 5 วิ)
--- ✅ ไม่เพิ่มซ้ำ แต่แก้ไขแถวเดิมแทน
--- 🧠 by Phakaphop GPT-5 Pro (with Coins)
+
 
 ---------------------------------------------------
 local GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySnPSDKKzRirKxXDmgZOJn1y2VH1GAL7dn27DDcXBZVkN0WAluGc8xG3ehIQ9bJhBgOQ/exec"
